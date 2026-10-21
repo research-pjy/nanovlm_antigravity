@@ -139,3 +139,38 @@ python scripts/train.py \
     --batch-size 64 \
     --save-dir ~/nanovlm-runs/shortdesc_mini_conv_stem_strided
 ```
+
+---
+
+## Step 8: Evaluate Trained Models (ROUGE-1 + Table 3 LLM-as-a-Judge)
+
+Evaluate each trained model on the 25 held-out test samples:
+
+```bash
+# 1. Evaluate patch_then_conv
+python scripts/evaluate.py \
+    --checkpoint ~/nanovlm-runs/shortdesc_mini_patch_then_conv/nanovlm_mini_patch_then_conv_best.pt \
+    --tokenizer ~/nanovlm-runs/shortdesc_mini_patch_then_conv/tokenizer.json \
+    --dataset-json ~/datasets/nanovlm_clean/shortdesc.json \
+    --image-root ~/datasets \
+    --mode short \
+    --run-judge
+
+# 2. Evaluate conv_then_patch_grid
+python scripts/evaluate.py \
+    --checkpoint ~/nanovlm-runs/shortdesc_mini_conv_then_patch/nanovlm_mini_conv_then_patch_grid_best.pt \
+    --tokenizer ~/nanovlm-runs/shortdesc_mini_conv_then_patch/tokenizer.json \
+    --dataset-json ~/datasets/nanovlm_clean/shortdesc.json \
+    --image-root ~/datasets \
+    --mode short \
+    --run-judge
+
+# 3. Evaluate conv_stem_strided
+python scripts/evaluate.py \
+    --checkpoint ~/nanovlm-runs/shortdesc_mini_conv_stem_strided/nanovlm_mini_conv_stem_strided_best.pt \
+    --tokenizer ~/nanovlm-runs/shortdesc_mini_conv_stem_strided/tokenizer.json \
+    --dataset-json ~/datasets/nanovlm_clean/shortdesc.json \
+    --image-root ~/datasets \
+    --mode short \
+    --run-judge
+```

@@ -90,14 +90,18 @@ class NanoVLMDataset(Dataset):
         if self.image_transform is not None:
             image_tensor = self.image_transform(image)
         else:
-            # Default resize to 224x224 and convert to normalized float tensor
+            # Default resize to 224x224 and convert to normalized float tensor (no deprecation warnings)
             image = image.resize((224, 224))
-            image_tensor = torch.ByteTensor(torch.ByteStorage.from_buffer(image.tobytes()))
-            image_tensor = image_tensor.view(224, 224, 3).permute(2, 0, 1).float() / 255.0
+            raw_bytes = bytearray(image.tobytes())
+            image_tensor = torch.frombuffer(raw_bytes, dtype=torch.uint8).reshape(224, 224, 3)
+            image_tensor = image_tensor.permute(2, 0, 1).to(dtype=torch.float32) / 255.0
 
         text = sample["description"]
         if self.tokenizer is not None:
-            token_ids = self.tokenizer(text)
+            if hasattr(self.tokenizer, "encode"):
+                token_ids = self.tokenizer.encode(text)
+            else:
+                token_ids = self.tokenizer(text)
         else:
             # Simple byte-level fallback tokenizer if no external tokenizer is passed
             token_ids = list(text.encode("utf-8"))

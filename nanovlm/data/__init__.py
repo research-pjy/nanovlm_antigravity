@@ -6,10 +6,12 @@ from nanovlm.data.dataset import (
     PROMPT_EVAL_JUDGE,
     NanoVLMDataset,
 )
+from nanovlm.data.tokenizer import SimpleChildTokenizer
 
 __all__ = [
     "PROMPT_SHORT_DESC",
     "PROMPT_LONG_DESC",
     "PROMPT_EVAL_JUDGE",
     "NanoVLMDataset",
+    "SimpleChildTokenizer",
 ]
