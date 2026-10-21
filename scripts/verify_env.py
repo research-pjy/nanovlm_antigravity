@@ -43,7 +43,7 @@ def main() -> None:
     except ImportError as e:
         print(f"[ERROR] PyTorch import failed: {e}")
 
-    for pkg in ("transformers", "accelerate", "einops", "PIL"):
+    for pkg in ("transformers", "accelerate", "PIL", "tqdm"):
         try:
             mod = __import__(pkg)
             ver = getattr(mod, "__version__", "installed")

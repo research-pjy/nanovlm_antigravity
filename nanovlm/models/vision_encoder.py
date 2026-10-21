@@ -26,7 +26,6 @@ with clean support for comparing the four patch extraction & convolution orderin
 
 import torch
 import torch.nn as nn
-from einops import rearrange
 
 from nanovlm.config import NanoVLMConfig
 from nanovlm.models.attention import TransformerBlock
@@ -97,19 +96,20 @@ class PatchEmbedding(nn.Module):
 
         if self.patch_mode == "patch_then_conv":
             # Step 1: Divide image into 196 non-overlapping 16x16 patches FIRST
-            # (B, C, H, W) -> (B * 196, C, 16, 16)
-            patches = rearrange(
-                images,
-                "b c (nh p1) (nw p2) -> (b nh nw) c p1 p2",
-                p1=P,
-                p2=P,
+            # (B, C, nH*P, nW*P) -> (B * 196, C, 16, 16)
+            nh, nw = H // P, W // P
+            patches = (
+                images.view(B, C, nh, P, nw, P)
+                .permute(0, 2, 4, 1, 3, 5)
+                .contiguous()
+                .view(B * nh * nw, C, P, P)
             )
             # Step 2: Apply two 2D convolutions independently to each patch
             feat = self.act(self.conv1(patches))
             feat = self.act(self.conv2(feat))  # (B * 196, c2, 16, 16)
 
             # Step 3: Flatten per-patch features, normalize, and project via FC layer
-            feat_flat = rearrange(feat, "(b n) c p1 p2 -> b n (c p1 p2)", b=B)
+            feat_flat = feat.view(B, nh * nw, -1)
             tokens = self.fc(self.act(self.norm(feat_flat)))  # (B, 196, img_embd_dim)
             return tokens
 
@@ -119,11 +119,13 @@ class PatchEmbedding(nn.Module):
             feat = self.act(self.conv2(feat))  # (B, c2, 224, 224)
 
             # Step 2: Slice the resulting feature map into 196 patches of (c2, 16, 16)
-            feat_flat = rearrange(
-                feat,
-                "b c (nh p1) (nw p2) -> b (nh nw) (c p1 p2)",
-                p1=P,
-                p2=P,
+            c2 = feat.size(1)
+            nh, nw = H // P, W // P
+            feat_flat = (
+                feat.view(B, c2, nh, P, nw, P)
+                .permute(0, 2, 4, 1, 3, 5)
+                .contiguous()
+                .view(B, nh * nw, c2 * P * P)
             )
             # Step 3: Normalize and project via FC layer
             tokens = self.fc(self.act(self.norm(feat_flat)))  # (B, 196, img_embd_dim)
@@ -135,13 +137,13 @@ class PatchEmbedding(nn.Module):
             feat = self.act(self.conv2(feat))  # (B, c2, 14, 14)
 
             # Step 2: Rearrange 14x14 spatial grid into 196 tokens of dim c2
-            feat_tokens = rearrange(feat, "b c h w -> b (h w) c")  # (B, 196, c2)
-            tokens = self.fc(self.act(self.norm(feat_tokens)))    # (B, 196, img_embd_dim)
+            feat_tokens = feat.flatten(2).transpose(1, 2).contiguous()  # (B, 196, c2)
+            tokens = self.fc(self.act(self.norm(feat_tokens)))          # (B, 196, img_embd_dim)
             return tokens
 
         elif self.patch_mode == "standard_vit":
             feat = self.proj(images)  # (B, img_embd_dim, 14, 14)
-            tokens = rearrange(feat, "b d h w -> b (h w) d")
+            tokens = feat.flatten(2).transpose(1, 2).contiguous()
             return self.norm(tokens)
 
         raise RuntimeError("Unreachable")
