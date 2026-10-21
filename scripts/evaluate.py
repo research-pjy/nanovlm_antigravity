@@ -134,6 +134,8 @@ def main() -> None:
     avg_rouge = sum(rouge_scores) / max(len(rouge_scores), 1)
     print(f"Average ROUGE-1 Score: {avg_rouge:.4f} (Paper target < 0.50 to confirm non-memorization)")
 
+    avg_metrics = None
+    avg_total = None
     if args.run_judge:
         from scripts.build_descriptions import load_teacher_model_and_tokenizer
         judge_model, judge_tok = load_teacher_model_and_tokenizer(args.judge_model)
@@ -178,8 +180,12 @@ def main() -> None:
               f"Plot: {avg_metrics['plot']} || Average Total: {avg_total} / 50")
 
     out_path = Path(args.checkpoint).parent / f"eval_{args.mode}.json"
+    payload = {"avg_rouge1": round(avg_rouge, 4), "results": results}
+    if avg_metrics is not None:
+        payload["avg_metrics"] = avg_metrics
+        payload["avg_total"] = avg_total
     with open(out_path, "w", encoding="utf-8") as f:
-        json.dump({"avg_rouge1": round(avg_rouge, 4), "results": results}, f, indent=2)
+        json.dump(payload, f, indent=2)
     print(f"Saved evaluation results to {out_path}")
 
 

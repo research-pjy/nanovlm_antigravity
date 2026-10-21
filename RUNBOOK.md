@@ -174,3 +174,25 @@ python scripts/evaluate.py \
     --mode short \
     --run-judge
 ```
+
+---
+
+## Step 9: Automated Full-Matrix Runner (All 24 Experiments + Summary Report)
+
+To train and evaluate the entire matrix across both datasets (`ShortDesc`, `LongDesc`), all 3 model sizes (`mini`, `base`, `large`), and all 4 patch modes (`patch_then_conv`, `conv_then_patch_grid`, `conv_stem_strided`, `standard_vit`):
+
+- **Automatically skips** any run that already has a trained `*_best.pt` checkpoint and `eval_*.json` (so your completed `shortdesc_mini_*` runs are reused immediately!).
+- **Loads `Qwen/Qwen3-VL-8B-Instruct` only ONCE** at the end to batch-grade all newly trained models.
+- **Outputs:** `~/nanovlm-runs/summary_results.md`, `~/nanovlm-runs/summary_results.csv`, and `~/nanovlm-runs/summary_results.json`.
+
+```bash
+# Run the complete 24-experiment matrix (recommended inside tmux):
+python scripts/run_full_matrix.py \
+    --dataset-dir ~/datasets/nanovlm_clean \
+    --image-root ~/datasets \
+    --runs-dir ~/nanovlm-runs \
+    --epochs 20 \
+    --batch-size 64
+```
+
+*(Optional: If you want to finish `ShortDesc` across `mini`, `base`, and `large` first before `LongDesc`, pass `--datasets short` and then `--datasets long`.)*
