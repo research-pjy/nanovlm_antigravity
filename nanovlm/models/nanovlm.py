@@ -54,9 +54,20 @@ class NanoVLM(nn.Module):
         max_new_tokens: int = 30,
         temperature: float = 0.8,
         top_k: Optional[int] = 40,
+        repetition_penalty: float = 1.0,
         eos_token_id: Optional[int] = None,
     ) -> torch.Tensor:
-        """Autoregressively complete partial text descriptions conditioned on an image (Section 3)."""
+        """Autoregressively complete partial text descriptions conditioned on an image (Section 3).
+
+        Args:
+            images: Input image tensor of shape (B, 3, 224, 224).
+            prompt_ids: Prompt token IDs of shape (B, T_prompt).
+            max_new_tokens: Maximum number of tokens to generate.
+            temperature: Sampling temperature (set <= 0 for greedy decoding).
+            top_k: Top-K filtering threshold.
+            repetition_penalty: Penalty > 1.0 (e.g. 1.15) discourages repeating already-generated tokens.
+            eos_token_id: Optional end-of-sequence token ID to stop early.
+        """
         self.eval()
         vis_features = self.vision_encoder(images)
         vis_tokens = self.connector(vis_features)
@@ -67,14 +78,30 @@ class NanoVLM(nn.Module):
                 break
 
             logits, _ = self.decoder(vis_tokens, generated)
-            next_token_logits = logits[:, -1, :] / max(temperature, 1e-5)
+            next_token_logits = logits[:, -1, :].clone()
 
-            if top_k is not None:
-                v, _ = torch.topk(next_token_logits, min(top_k, next_token_logits.size(-1)))
-                next_token_logits[next_token_logits < v[:, [-1]]] = -float("Inf")
+            # Apply repetition penalty (Keskar et al., 2019) to prevent phrase loops in LongDesc
+            if repetition_penalty != 1.0:
+                for b_idx in range(generated.size(0)):
+                    seen_tokens = torch.unique(generated[b_idx])
+                    seen_logits = next_token_logits[b_idx, seen_tokens]
+                    next_token_logits[b_idx, seen_tokens] = torch.where(
+                        seen_logits < 0,
+                        seen_logits * repetition_penalty,
+                        seen_logits / repetition_penalty,
+                    )
 
-            probs = F.softmax(next_token_logits, dim=-1)
-            next_token = torch.multinomial(probs, num_samples=1)
+            if temperature <= 0.0:
+                next_token = torch.argmax(next_token_logits, dim=-1, keepdim=True)
+            else:
+                next_token_logits = next_token_logits / max(temperature, 1e-5)
+                if top_k is not None:
+                    v, _ = torch.topk(next_token_logits, min(top_k, next_token_logits.size(-1)))
+                    next_token_logits[next_token_logits < v[:, [-1]]] = -float("Inf")
+
+                probs = F.softmax(next_token_logits, dim=-1)
+                next_token = torch.multinomial(probs, num_samples=1)
+
             generated = torch.cat([generated, next_token], dim=1)
 
             if eos_token_id is not None and (next_token == eos_token_id).all():

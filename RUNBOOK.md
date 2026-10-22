@@ -220,3 +220,32 @@ python scripts/run_phase2_ideas.py \
     --epochs 20 \
     --batch-size 64
 ```
+
+---
+
+## Step 11: Zero-Retraining Repetition-Penalty Decoding Ablation (`LongDesc`)
+
+Test how adding `repetition_penalty=1.15` and `temperature=0.5` improves long-paragraph (`LongDesc`, 60–70 words) generation on your existing trained `base` and `large` checkpoints (no retraining needed; takes ~2 minutes):
+
+```bash
+python scripts/eval_decoding_ablation.py \
+    --dataset-dir ~/datasets/nanovlm_clean \
+    --image-root ~/datasets \
+    --runs-dir ~/nanovlm-runs \
+    --variants base large \
+    --temperature 0.5 \
+    --repetition-penalty 1.15
+```
+
+---
+
+## Step 12: Generate Publication-Ready Plots & Figures (`results/figures/`)
+
+Generate the Pareto frontier plot, grouped architecture bar charts, validation loss curves, and Paper Figure 6 loss trajectory plots:
+
+```bash
+python scripts/generate_plots.py \
+    --md-file results/summary_phase2_comparison.md \
+    --runs-dir ~/nanovlm-runs \
+    --out-dir results/figures
+```

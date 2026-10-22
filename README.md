@@ -1,52 +1,64 @@
-# NanoVLM: Clean PyTorch Recreation & Patch-vs-Convolution Testbed
+# NanoVLM: Patch-vs-Convolution Dissection & Ultra-Compact Vision Stems
 
-A clean, modular PyTorch implementation of **"NanoVLMs: How small can we go and still make coherent Vision Language Models?"** (Agarwalla et al., 2025), designed to test and compare architectural variations in the Visual Encoder's patch-and-convolution pipeline.
+A clean, modular PyTorch implementation and empirical study extending **"NanoVLMs: How small can we go and still make coherent Vision Language Models?"** (Agarwalla et al., 2025).
 
-## Project Structure
+This repository resolves the **Patch-then-Conv vs. Conv-then-Patch** architectural ambiguity in the NanoVLM visual encoder and introduces three novel ultra-compact vision-stem & connector architectures (`overlapping_conv_stem`, `convnext_stem`, and `convnext_swiglu`), validated across **42 full training runs** on 28,100 COCO images (`ShortDesc` and `LongDesc`).
+
+---
+
+## Key Headline Results
+
+| Dataset | Scale | Architecture | Total Params | PatchEmbed Params | Best Val Loss | **Total Score (/50)** |
+| :--- | :--- | :--- | :---: | :---: | :---: | :---: |
+| **ShortDesc** | `mini` | `patch_then_conv` *(Paper Baseline)* | 5.58M | 1.648M | 2.9718 | 34.88 |
+| **ShortDesc** | `mini` | `conv_then_patch_grid` *(Conv First)* | 5.58M | 1.648M | 2.9798 | 36.16 *(+1.28)* |
+| **ShortDesc** | `mini` | **`conv_stem_strided`** *(Strided Stem)* | **3.94M** *(-29%)* | **0.009M** | 2.9790 | **38.04** *(+3.16)* |
+| **ShortDesc** | `base` | `patch_then_conv` *(Paper Baseline)* | 15.23M | 2.107M | 2.8729 | 38.76 |
+| **ShortDesc** | `base` | **`*convnext_swiglu*`** *(Ours)* | **13.31M** *(-13%)* | **0.118M** | **2.8574** | **40.44** *(+1.68, SOTA)* |
+| **LongDesc** | `base` | `patch_then_conv` *(Paper Baseline)* | 15.46M | 2.107M | 2.5034 | 34.92 |
+| **LongDesc** | `base` | **`conv_then_patch_grid`** *(Conv First)* | 15.46M | 2.107M | 2.5227 | **38.32** *(+3.40)* |
+| **LongDesc** | `large` | `patch_then_conv` *(Paper Baseline)* | 25.73M | 2.107M | 2.4735 | 37.84 |
+| **LongDesc** | `large` | **`conv_then_patch_grid`** *(Conv First)* | 25.73M | 2.107M | 2.4810 | **38.84** *(+1.00)* |
+| **LongDesc** | `large` | **`*convnext_swiglu*`** *(Ours)* | **23.84M** *(-7%)* | **0.118M** | **2.4664** *(Best)* | 36.80 |
+
+- Read the full scientific analysis in **[`RESEARCH_REPORT.md`](RESEARCH_REPORT.md)**.
+- Browse all 42 experimental runs in **[`results/summary_phase2_comparison.md`](results/summary_phase2_comparison.md)**.
+- Follow the step-by-step reproduction commands in **[`RUNBOOK.md`](RUNBOOK.md)**.
+
+---
+
+## Repository Structure
 
 ```text
 NanoVLM/
 ├── nanovlm/
 │   ├── __init__.py
-│   ├── config.py                # Hyperparameter presets (mini: 5M, base: 16M, large: 25M)
+│   ├── config.py                  # Hyperparameter presets (mini, base, large) + 6 PatchModes + 2 ConnectorModes
 │   ├── models/
 │   │   ├── __init__.py
-│   │   ├── attention.py         # Pre-LN Multi-Head Attention & TransformerBlock (Flash/SDPA ready)
-│   │   ├── vision_encoder.py    # Configurable PatchEmbedding (4 modes) + VisionEncoder
-│   │   ├── connector.py         # MultimodalProjector (Linear + GELU)
-│   │   ├── decoder.py           # Autoregressive Causal LanguageDecoder
-│   │   └── nanovlm.py           # Full NanoVLM model + parameter breakdown utility
+│   │   ├── attention.py           # Pre-LN Multi-Head Attention & TransformerBlock (FlashAttention/SDPA)
+│   │   ├── vision_encoder.py      # 6 configurable PatchEmbedding architectures + VisionEncoder
+│   │   ├── connector.py           # Linear+GELU baseline & 2D Spatial Token Mixer + SwiGLU Projector
+│   │   ├── decoder.py             # Causal Multimodal LanguageDecoder
+│   │   └── nanovlm.py             # Top-level NanoVLM + repetition-penalized autoregressive generation
 │   └── data/
 │       ├── __init__.py
-│       └── dataset.py           # ShortDesc / LongDesc dataset loader & GPT-4o prompts
+│       ├── dataset.py             # ShortDesc / LongDesc dataset loader & paper prompts
+│       └── tokenizer.py           # Deterministic child-vocabulary word & punctuation tokenizer
 ├── scripts/
-│   ├── compare_patch_modes.py   # Compares parameter counts & module splits across all 4 patch modes
-│   └── train.py                 # Mixed-precision (bf16/fp16) training pipeline for L40S / A100
+│   ├── verify_env.py              # L40S / CUDA / dataset integrity verification
+│   ├── build_descriptions.py      # Crash-proof batched ShortDesc & LongDesc generator (Qwen3-VL-8B-Instruct)
+│   ├── compare_patch_modes.py     # Parameter & shape breakdown across all 6 vision stems
+│   ├── train.py                   # BF16 mixed-precision training with cosine schedule & live sample preview
+│   ├── evaluate.py                # Held-out ROUGE-1 & 5-metric LLM-as-a-Judge evaluator
+│   ├── run_full_matrix.py         # Automated 24-run Phase 1 matrix runner
+│   ├── run_phase2_ideas.py        # Automated 18-run Phase 2 novel architecture runner
+│   ├── eval_decoding_ablation.py  # Zero-retraining repetition-penalty decoding ablation on LongDesc
+│   └── generate_plots.py          # Generates publication-ready PNG figures from results
+├── results/
+│   ├── summary_results.md         # 24-run Phase 1 baseline benchmark table
+│   └── summary_phase2_comparison.md # Complete 42-run Phase 1 + Phase 2 benchmark table
+├── RESEARCH_REPORT.md             # Full paper-style technical report & mathematical proofs
+├── RUNBOOK.md                     # Exact sequential execution commands for L40S (`rama`)
 └── requirements.txt
-```
-
-## Comparing the Patch vs. Convolution Modes
-
-Run the parameter and shape comparison script:
-
-```bash
-python scripts/compare_patch_modes.py
-```
-
-The four selectable `--patch-mode` options in [`PatchEmbedding`](nanovlm/models/vision_encoder.py) are:
-1. `patch_then_conv`: Divide $224\times 224$ image into $196$ patches of $(3, 16, 16)$ $\to$ 2x `Conv2d` per patch $\to$ Flatten ($4096$-d) $\to$ `Linear(4096, img_embd_dim)`.
-2. `conv_then_patch_grid`: Run 2x `Conv2d` on the full $(3, 224, 224)$ image first $\to$ slice feature map into $196$ patches of $(C_{\text{out}}, 16, 16)$ $\to$ Flatten ($4096$-d) $\to$ `Linear(4096, img_embd_dim)`. *(Identical parameter count to `patch_then_conv`, but convolutions share receptive fields across patch boundaries!)*
-3. `conv_stem_strided`: Run 2x strided `Conv2d` (stride 4 each) on the full $(3, 224, 224)$ image to downsample directly to $(C_{\text{out}}, 14, 14)$ ($196$ spatial tokens) $\to$ `Linear(C_out, img_embd_dim)`. *(Eliminates ~1.6M–2.1M parameters from the FC bottleneck!)*
-4. `standard_vit`: Standard ViT single `Conv2d(3, img_embd_dim, kernel_size=16, stride=16)` baseline.
-
-## Training
-
-```bash
-# Quick synthetic smoke test:
-python scripts/train.py --variant mini --patch-mode patch_then_conv --synthetic --epochs 2
-
-# Train on ShortDesc / LongDesc dataset:
-python scripts/train.py --variant base --patch-mode conv_then_patch_grid \
-    --train-json data/short_desc_train.json --val-json data/short_desc_val.json \
-    --image-root data/coco/train2017 --epochs 20 --batch-size 64
 ```

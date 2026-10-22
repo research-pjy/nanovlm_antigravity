@@ -70,6 +70,8 @@ def main() -> None:
     parser.add_argument("--image-root", type=str, required=True, help="Path to ~/datasets")
     parser.add_argument("--num-samples", type=int, default=25, help="Number of held-out samples (Paper: 25)")
     parser.add_argument("--mode", type=str, default="short", choices=["short", "long"])
+    parser.add_argument("--temperature", type=float, default=0.7, help="Sampling temperature (<=0 for greedy)")
+    parser.add_argument("--repetition-penalty", type=float, default=1.0, help="Repetition penalty (e.g. 1.15)")
     parser.add_argument("--run-judge", action="store_true", help="Grade completions with Qwen3-VL-8B-Instruct")
     parser.add_argument("--judge-model", type=str, default="Qwen/Qwen3-VL-8B-Instruct")
     args = parser.parse_args()
@@ -115,8 +117,9 @@ def main() -> None:
             img,
             prompt_tensor,
             max_new_tokens=max_new_tokens,
-            temperature=0.7,
+            temperature=args.temperature,
             top_k=20,
+            repetition_penalty=args.repetition_penalty,
             eos_token_id=tokenizer.eos_token_id,
         )
         completed_text = tokenizer.decode(out_ids[0].tolist(), skip_special_tokens=True)
