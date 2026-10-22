@@ -4,10 +4,19 @@ from dataclasses import dataclass
 from typing import Literal
 
 PatchMode = Literal[
-    "patch_then_conv",       # Divide 224x224 into 196x(3,16,16) patches -> 2x Conv2d per patch -> Flatten -> Linear
-    "conv_then_patch_grid",  # 2x Conv2d on full 224x224 image -> Unfold into 196x(C,16,16) grids -> Flatten -> Linear
-    "conv_stem_strided",     # 2x Strided Conv2d on full 224x224 image -> (C,14,14) feature map -> 196 tokens -> Linear
-    "standard_vit",          # Standard ViT single Conv2d(3, img_embd_dim, kernel_size=16, stride=16) baseline
+    # Phase 1: Paper recreation & Patch-vs-Conv ordering ablations
+    "patch_then_conv",          # Divide 224x224 into 196x(3,16,16) patches -> 2x Conv2d per patch -> Flatten -> Linear
+    "conv_then_patch_grid",     # 2x Conv2d on full 224x224 image -> Unfold into 196x(C,16,16) grids -> Flatten -> Linear
+    "conv_stem_strided",        # 2x Strided Conv2d (3->8->16) on full 224x224 image -> (16,14,14) -> Linear
+    "standard_vit",             # Standard ViT single Conv2d(3, img_embd_dim, kernel_size=16, stride=16) baseline
+    # Phase 2: Novel Ultra-Compact Vision Stems (solving the 16-d bottleneck while saving ~1.9M-2.0M params)
+    "overlapping_conv_stem",    # Idea 1: Overlapping 7x7(s4)->3x3(s4) Conv stem (3->32->96) + GELU -> Linear
+    "convnext_stem",            # Idea 2: Strided stem + 7x7 Depthwise-Separable ConvNeXt residual block -> Linear
+]
+
+ConnectorMode = Literal[
+    "linear_gelu",              # Paper baseline: single Linear(img_embd_dim, n_embd) + GELU
+    "swiglu_token_mixer",       # Idea 3: Local 3x3 depthwise spatial token mixer + SwiGLU gated projection
 ]
 
 
@@ -37,6 +46,7 @@ class NanoVLMConfig:
     # To match Table 2 parameter ratios (14% mini, 8% base, 6% large),
     # the projector maps flattened visual representation or token projection into n_embd.
     projector_use_token_pooling: bool = False
+    connector_mode: ConnectorMode = "linear_gelu"
     
     # Language Decoder parameters (Table 1)
     n_layer: int = 4               # Number of transformer layers in decoder

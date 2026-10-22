@@ -76,6 +76,45 @@ class PatchEmbedding(nn.Module):
                 stride=self.patch_size,
             )
             self.norm = nn.LayerNorm(self.img_embd_dim)
+
+        elif self.patch_mode == "overlapping_conv_stem":
+            # Idea 1: Overlapping Multi-Stage Conv Stem (solves the 16-d information bottleneck
+            # of conv_stem_strided while still saving ~1.6M-2.0M parameters!).
+            # Uses overlapping 7x7 (stride 4) -> 3x3 (stride 3/4) convolutions with richer channels
+            # (3 -> 32 -> 96) so neighboring patches share spatial context AND each token gets 96 channels.
+            stem_mid = 32
+            stem_out = 96
+            self.conv1 = nn.Conv2d(self.in_channels, stem_mid, kernel_size=7, stride=4, padding=3, bias=False)
+            self.bn1 = nn.BatchNorm2d(stem_mid)
+            self.conv2 = nn.Conv2d(stem_mid, stem_out, kernel_size=5, stride=4, padding=2, bias=False)
+            self.bn2 = nn.BatchNorm2d(stem_out)
+            self.act = nn.GELU()
+            self.norm = nn.LayerNorm(stem_out)
+            self.fc = nn.Linear(stem_out, self.img_embd_dim)
+
+        elif self.patch_mode == "convnext_stem":
+            # Idea 2: Depthwise-Separable ConvNeXt-style Vision Stem
+            # Stage 1: Overlapping downsampling stem to 14x14 spatial grid (64 channels)
+            # Stage 2: 7x7 Depthwise Conv across the 14x14 grid (captures wide 7x7 patch neighborhood!)
+            #          + Inverted Pointwise MLP (64 -> 192 -> 64) with residual connection
+            stem_dim = 64
+            self.stem = nn.Sequential(
+                nn.Conv2d(self.in_channels, 32, kernel_size=7, stride=4, padding=3, bias=False),
+                nn.BatchNorm2d(32),
+                nn.GELU(),
+                nn.Conv2d(32, stem_dim, kernel_size=5, stride=4, padding=2, bias=False),
+                nn.BatchNorm2d(stem_dim),
+                nn.GELU(),
+            )
+            # ConvNeXt-style 7x7 depthwise mixing across the 14x14 patch tokens
+            self.dwconv = nn.Conv2d(stem_dim, stem_dim, kernel_size=7, stride=1, padding=3, groups=stem_dim)
+            self.norm1 = nn.LayerNorm(stem_dim)
+            self.pwconv1 = nn.Linear(stem_dim, stem_dim * 3)
+            self.act = nn.GELU()
+            self.pwconv2 = nn.Linear(stem_dim * 3, stem_dim)
+            self.norm2 = nn.LayerNorm(stem_dim)
+            self.fc = nn.Linear(stem_dim, self.img_embd_dim)
+
         else:
             raise ValueError(f"Unsupported patch_mode: {self.patch_mode}")
 
@@ -145,6 +184,24 @@ class PatchEmbedding(nn.Module):
             feat = self.proj(images)  # (B, img_embd_dim, 14, 14)
             tokens = feat.flatten(2).transpose(1, 2).contiguous()
             return self.norm(tokens)
+
+        elif self.patch_mode == "overlapping_conv_stem":
+            feat = self.act(self.bn1(self.conv1(images)))  # (B, 32, 56, 56)
+            feat = self.act(self.bn2(self.conv2(feat)))    # (B, 96, 14, 14)
+            feat_tokens = feat.flatten(2).transpose(1, 2).contiguous()  # (B, 196, 96)
+            tokens = self.fc(self.norm(feat_tokens))                    # (B, 196, img_embd_dim)
+            return tokens
+
+        elif self.patch_mode == "convnext_stem":
+            feat = self.stem(images)                       # (B, 64, 14, 14)
+            residual = feat
+            feat = self.dwconv(feat)                       # (B, 64, 14, 14)
+            feat_tokens = feat.flatten(2).transpose(1, 2).contiguous()  # (B, 196, 64)
+            feat_tokens = self.pwconv2(self.act(self.pwconv1(self.norm1(feat_tokens))))
+            res_tokens = residual.flatten(2).transpose(1, 2).contiguous()
+            feat_tokens = res_tokens + feat_tokens         # Residual connection
+            tokens = self.fc(self.norm2(feat_tokens))      # (B, 196, img_embd_dim)
+            return tokens
 
         raise RuntimeError("Unreachable")
 

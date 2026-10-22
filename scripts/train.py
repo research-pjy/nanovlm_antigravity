@@ -124,7 +124,20 @@ def main() -> None:
         "--patch-mode",
         type=str,
         default="patch_then_conv",
-        choices=["patch_then_conv", "conv_then_patch_grid", "conv_stem_strided", "standard_vit"],
+        choices=[
+            "patch_then_conv",
+            "conv_then_patch_grid",
+            "conv_stem_strided",
+            "standard_vit",
+            "overlapping_conv_stem",
+            "convnext_stem",
+        ],
+    )
+    parser.add_argument(
+        "--connector-mode",
+        type=str,
+        default="linear_gelu",
+        choices=["linear_gelu", "swiglu_token_mixer"],
     )
     parser.add_argument("--train-json", type=str, default=None, help="Path to dataset JSON (e.g. shortdesc.json)")
     parser.add_argument("--val-json", type=str, default=None, help="Optional separate validation JSON")
@@ -154,6 +167,7 @@ def main() -> None:
     cfg = get_config(
         variant=args.variant,  # type: ignore[arg-type]
         patch_mode=args.patch_mode,  # type: ignore[arg-type]
+        connector_mode=args.connector_mode,  # type: ignore[arg-type]
         learning_rate=args.lr,
         vocab_size=vocab_size,
     )

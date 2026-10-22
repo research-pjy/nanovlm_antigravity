@@ -196,3 +196,27 @@ python scripts/run_full_matrix.py \
 ```
 
 *(Optional: If you want to finish `ShortDesc` across `mini`, `base`, and `large` first before `LongDesc`, pass `--datasets short` and then `--datasets long`.)*
+
+---
+
+## Step 10: Phase 2 — Test Our 3 Novel Architectural Ideas (`run_phase2_ideas.py`)
+
+Now that Phase 1 (`patch_then_conv`, `conv_then_patch_grid`, `conv_stem_strided`, `standard_vit`) is complete, test our 3 custom architectural innovations designed to solve the 16-d bottleneck of `conv_stem_strided` while keeping the ~1.6M–2.0M parameter savings:
+
+1. **`overlapping_conv_stem`**: Overlapping $7\times 7(\text{s}4) \to 5\times 5(\text{s}4)$ Conv stem ($3 \to 32 \to 96$) + BatchNorm + GELU.
+2. **`convnext_stem`**: Overlapping stem + $7\times 7$ Depthwise-Separable ConvNeXt residual block across the $14\times 14$ patch grid.
+3. **`convnext_swiglu`**: Combines `convnext_stem` with a **2D Spatial Depthwise Token Mixer + SwiGLU Gated Multimodal Projector** (`--connector-mode swiglu_token_mixer`).
+
+```bash
+# First check the parameter counts of the new modes:
+python scripts/compare_patch_modes.py
+
+# Run all Phase 2 novel architectures across ShortDesc and LongDesc (mini, base, large)
+# and automatically generate ~/nanovlm-runs/summary_phase2_comparison.md:
+python scripts/run_phase2_ideas.py \
+    --dataset-dir ~/datasets/nanovlm_clean \
+    --image-root ~/datasets \
+    --runs-dir ~/nanovlm-runs \
+    --epochs 20 \
+    --batch-size 64
+```

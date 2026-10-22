@@ -20,6 +20,8 @@ PATCH_MODES: list[PatchMode] = [
     "conv_then_patch_grid",
     "conv_stem_strided",
     "standard_vit",
+    "overlapping_conv_stem",
+    "convnext_stem",
 ]
 
 VARIANTS = ["mini", "base", "large"]
