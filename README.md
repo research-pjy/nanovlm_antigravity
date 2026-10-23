@@ -15,11 +15,11 @@ This repository resolves the **Patch-then-Conv vs. Conv-then-Patch** architectur
 | **ShortDesc** | `mini` | **`conv_stem_strided`** *(Strided Stem)* | **3.94M** *(-29%)* | **0.009M** | 2.9790 | **38.04** *(+3.16)* |
 | **ShortDesc** | `base` | `patch_then_conv` *(Paper Baseline)* | 15.23M | 2.107M | 2.8729 | 38.76 |
 | **ShortDesc** | `base` | **`*convnext_swiglu*`** *(Ours)* | **13.31M** *(-13%)* | **0.118M** | **2.8574** | **40.44** *(+1.68, SOTA)* |
-| **LongDesc** | `base` | `patch_then_conv` *(Paper Baseline)* | 15.46M | 2.107M | 2.5034 | 34.92 |
-| **LongDesc** | `base` | **`conv_then_patch_grid`** *(Conv First)* | 15.46M | 2.107M | 2.5227 | **38.32** *(+3.40)* |
-| **LongDesc** | `large` | `patch_then_conv` *(Paper Baseline)* | 25.73M | 2.107M | 2.4735 | 37.84 |
-| **LongDesc** | `large` | **`conv_then_patch_grid`** *(Conv First)* | 25.73M | 2.107M | 2.4810 | **38.84** *(+1.00)* |
-| **LongDesc** | `large` | **`*convnext_swiglu*`** *(Ours)* | **23.84M** *(-7%)* | **0.118M** | **2.4664** *(Best)* | 36.80 |
+| **LongDesc** | `base` | `patch_then_conv` *(Paper Baseline)* | 15.46M | 2.107M | 2.5034 | 34.92 *(38.88 w/ rep=1.15)* |
+| **LongDesc** | `base` | **`*convnext_swiglu*`** *(Ours)* | **13.54M** *(-12%)* | **0.118M** | **2.4909** | **39.64** *(Best Base w/ rep=1.15)* |
+| **LongDesc** | `large` | `patch_then_conv` *(Paper Baseline)* | 25.73M | 2.107M | 2.4735 | 37.84 *(38.36 w/ rep=1.15)* |
+| **LongDesc** | `large` | **`*convnext_stem*`** *(Ours)* | **23.74M** *(-8%)* | **0.118M** | **2.4701** | **40.72** *(+2.36 vs Paper)* |
+| **LongDesc** | `large` | **`conv_then_patch_grid`** *(Conv First)* | 25.73M | 2.107M | 2.4810 | **41.04** *(+2.68, Best Overall)* |
 
 - Read the full scientific analysis in **[`RESEARCH_REPORT.md`](RESEARCH_REPORT.md)**.
 - Browse all 42 experimental runs in **[`results/summary_phase2_comparison.md`](results/summary_phase2_comparison.md)**.
