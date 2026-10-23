@@ -91,7 +91,21 @@ Full results are archived in [`results/summary_phase2_comparison.md`](results/su
 
 ---
 
-## 4. Training & Validation Convergence Analysis (Figure 6 Recreation)
+## 4. Visual Analysis & Publication Figures
+
+### 4.1 Architecture Ablation & Parameter Efficiency Frontier
+
+![Architecture Ablation Bar Charts](results/figures/ablation_bars_short_long.png)
+
+![Parameter Efficiency Frontier](results/figures/pareto_frontier.png)
+
+As shown in the **Parameter Efficiency Frontier (`pareto_frontier.png`)**:
+- On **`ShortDesc` (left)**, `conv_stem_strided` (green) at **3.94M parameters (`38.04/50`)** and `*convnext_swiglu*` (red) at **13.31M parameters (`40.44/50`)** establish the upper Pareto frontier, strictly dominating the heavier `patch_then_conv` paper baseline (grey) at every parameter scale.
+- On **`LongDesc` (right)**, every single cross-boundary and compact stem architecture lies strictly above the paper's `patch_then_conv` curve at the `base` scale (13.3M–15.5M), with `conv_then_patch_grid` and `*convnext_stem*` reaching **41.04/50** and **40.72/50** under repetition-penalized decoding.
+
+### 4.2 Best Validation Loss & Training Trajectory Analysis (Figure 6 Recreation)
+
+![Best Validation Loss Across Scales](results/figures/val_loss_comparison.png)
 
 ![Figure 6: Training and Validation Loss Trajectories](results/figures/figure6_loss_curves.png)
 

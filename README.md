@@ -22,8 +22,14 @@ This repository resolves the **Patch-then-Conv vs. Conv-then-Patch** architectur
 | **LongDesc** | `large` | **`conv_then_patch_grid`** *(Conv First)* | 25.73M | 2.107M | 2.4810 | **41.04** *(+2.68, Best Overall)* |
 
 - Read the full scientific analysis in **[`RESEARCH_REPORT.md`](RESEARCH_REPORT.md)**.
-- Browse all 42 experimental runs in **[`results/summary_phase2_comparison.md`](results/summary_phase2_comparison.md)**.
+- Browse all 42 experimental runs in **[`results/summary_phase2_comparison.md`](results/summary_phase2_comparison.md)** and the decoding ablation in **[`results/summary_decoding_ablation.md`](results/summary_decoding_ablation.md)**.
 - Follow the step-by-step reproduction commands in **[`RUNBOOK.md`](RUNBOOK.md)**.
+
+### Parameter Efficiency & Benchmark Overview
+
+![Architecture Ablation Bar Charts](results/figures/ablation_bars_short_long.png)
+
+![Parameter Efficiency Frontier](results/figures/pareto_frontier.png)
 
 ---
 
