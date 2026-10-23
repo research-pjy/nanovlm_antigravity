@@ -91,7 +91,20 @@ Full results are archived in [`results/summary_phase2_comparison.md`](results/su
 
 ---
 
-## 4. Scientific Discussion & Key Takeaways
+## 4. Training & Validation Convergence Analysis (Figure 6 Recreation)
+
+![Figure 6: Training and Validation Loss Trajectories](results/figures/figure6_loss_curves.png)
+
+Inspection of the 6-panel training and validation cross-entropy loss trajectories (`ShortDesc` top row, `LongDesc` bottom row across `mini`, `base`, and `large`) reveals three key empirical dynamics:
+1. **Capacity-to-Complexity Scaling (`ShortDesc-large` vs. `LongDesc-large`):**
+   - On `ShortDesc` (20–25 word descriptions), `NanoVLM-mini` (train/val gap $0.28$) and `NanoVLM-base` (val loss $2.8574$, plateauing smoothly from Epoch 10–20) converge without overfitting. By contrast, `ShortDesc-large` (25.39M params) reaches its minimum validation loss around **Epoch 7–8** ($2.86$) before validation loss curves gently upward while training loss drops to $1.53$—visually explaining why `base` (`40.44/50`) outperforms `large` (`38.32/50`) on short descriptions!
+   - On `LongDesc` (60–70 word descriptions, ~3x more tokens per image), `LongDesc-mini` has virtually zero train-val gap ($0.04$), indicating capacity saturation, whereas `LongDesc-base` ($2.4909$) and `LongDesc-large` ($2.4664$) converge monotonically through Epoch 20 without validation divergence.
+2. **Identical Per-Epoch Convergence With 2M Fewer Parameters:**
+   Across all 6 subplots, the compact `conv_stem_strided` (red solid line) and `convnext_swiglu` (brown solid line) track or improve upon the validation loss of the 2.1M-heavier `patch_then_conv` (orange solid line) from Epoch 1 through Epoch 20.
+
+---
+
+## 5. Scientific Discussion & Key Takeaways
 
 1. **Why `conv_then_patch_grid` Beats `patch_then_conv` on Complex Scenes (`LongDesc`):**
    Applying convolutions to the full $224\times 224$ image before slicing into $16\times 16$ patches preserves spatial continuity across patch boundaries without adding a single parameter. On `LongDesc-base`, this simple reordering boosts the benchmark score from **34.92 $\to$ 38.32 (+3.40)** and on `LongDesc-large` from **37.84 $\to$ 38.84 (+1.00)**.
